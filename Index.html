@@ -1,0 +1,714 @@
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anime Gacha Mini App</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Telegram WebApp JS SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap');
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #080612;
+            color: #ffffff;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* Cyberpunk Neon Glassmorphism */
+        .glass-panel {
+            background: rgba(18, 14, 36, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-panel-interactive {
+            background: rgba(24, 18, 48, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-panel-interactive:active {
+            transform: scale(0.97);
+            border-color: rgba(236, 72, 153, 0.5);
+        }
+
+        /* Rare Colors Glow & Borders */
+        .glow-common { box-shadow: 0 0 15px rgba(156, 163, 175, 0.2); border-color: rgba(156, 163, 175, 0.5); }
+        .glow-rare { box-shadow: 0 0 20px rgba(59, 130, 246, 0.35); border-color: rgba(59, 130, 246, 0.7); }
+        .glow-epic { box-shadow: 0 0 25px rgba(168, 85, 247, 0.45); border-color: rgba(168, 85, 247, 0.8); }
+        .glow-legendary { box-shadow: 0 0 30px rgba(245, 158, 11, 0.55); border-color: rgba(245, 158, 11, 0.9); }
+        .glow-mythic { box-shadow: 0 0 35px rgba(236, 72, 153, 0.75); border-color: rgba(236, 72, 153, 1); }
+
+        /* Custom Animated Gradient Backgrounds */
+        .bg-cyber-gradient {
+            background: linear-gradient(135deg, #0d0722 0%, #170d38 50%, #080314 100%);
+        }
+
+        /* Card Shine Effect */
+        .card-shine {
+            position: relative;
+            overflow: hidden;
+        }
+        .card-shine::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                60deg,
+                transparent 30%,
+                rgba(255, 255, 255, 0.2) 50%,
+                transparent 70%
+            );
+            transform: rotate(30deg);
+            animation: shine 3.5s infinite linear;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(30deg); }
+            100% { transform: translateX(100%) rotate(30deg); }
+        }
+
+        /* Roulette marker & mask */
+        .roulette-container {
+            mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+            -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-20 flex flex-col justify-between bg-cyber-gradient">
+
+    <!-- HEADER / USER STATS -->
+    <header class="p-3.5 sticky top-0 z-40 glass-panel rounded-b-2xl border-b border-purple-500/20 shadow-lg shadow-purple-950/40">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div id="user-avatar" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-pink-500 via-purple-600 to-indigo-500 flex items-center justify-center text-lg font-black border border-white/30 shadow-md shadow-pink-500/30">
+                    A
+                </div>
+                <div>
+                    <h2 id="user-name" class="font-extrabold text-sm leading-tight text-white tracking-wide">Аниме Мастер</h2>
+                    <span id="user-level" class="text-[10px] uppercase tracking-wider text-pink-400 font-bold bg-pink-500/10 px-2 py-0.5 rounded-md border border-pink-500/20">Уровень 1</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <!-- Coins Balance -->
+                <div class="flex items-center gap-1.5 bg-black/60 px-3 py-1.5 rounded-xl border border-amber-500/40 shadow-inner">
+                    <i class="fa-solid fa-coins text-amber-400 text-xs drop-shadow-[0_0_5px_rgba(251,191,36,0.8)]"></i>
+                    <span id="balance-coins" class="font-black text-xs text-amber-300">1,500</span>
+                </div>
+                <!-- Gems Balance -->
+                <div class="flex items-center gap-1.5 bg-black/60 px-3 py-1.5 rounded-xl border border-pink-500/40 shadow-inner">
+                    <i class="fa-solid fa-gem text-pink-400 text-xs drop-shadow-[0_0_5px_rgba(244,63,94,0.8)]"></i>
+                    <span id="balance-gems" class="font-black text-xs text-pink-300">50</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINERS -->
+    <main class="max-w-md mx-auto px-4 w-full flex-1 mt-2">
+
+        <!-- TAB 1: CASES (HOME) -->
+        <section id="tab-cases" class="space-y-5">
+            <div class="text-center my-3">
+                <span class="text-[10px] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/30">
+                    🔥 Гача Руллетки
+                </span>
+                <h1 class="text-2xl font-black mt-2 bg-clip-text text-transparent bg-gradient-to-r from-purple-300 via-pink-400 to-amber-300">
+                    ОТКРЫВАЙ КЕЙСЫ
+                </h1>
+            </div>
+
+            <!-- AI Special Banner Case -->
+            <div class="relative group rounded-3xl overflow-hidden glass-panel border border-pink-500/50 p-5 bg-gradient-to-br from-purple-900/60 via-black to-pink-950/70 shadow-2xl shadow-pink-950/50">
+                <div class="absolute -right-8 -bottom-8 w-36 h-36 bg-pink-500/30 rounded-full blur-3xl"></div>
+                <div class="relative z-10 flex flex-col items-start">
+                    <div class="flex items-center justify-between w-full mb-2">
+                        <span class="bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-md shadow-pink-500/40">
+                            ✨ Gemini AI Exclusive
+                        </span>
+                        <span class="text-[11px] font-bold text-pink-300 animate-pulse">100% Уникальность</span>
+                    </div>
+                    <h3 class="text-xl font-black text-white">AI-Персонаж Case</h3>
+                    <p class="text-xs text-gray-300 my-2 leading-relaxed">
+                        Нейросеть генерирует <span class="text-pink-400 font-extrabold underline decoration-pink-500/50">совершенно нового</span> аниме-героя с легендарными характеристиками!
+                    </p>
+                    <div class="flex items-center justify-between w-full mt-2 pt-3 border-t border-white/10">
+                        <div class="flex items-center gap-1.5 font-black text-pink-400 text-lg">
+                            <i class="fa-solid fa-gem text-sm drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]"></i> 20
+                        </div>
+                        <button onclick="openCaseModal('ai')" class="bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:from-pink-600 hover:to-indigo-700 text-white font-extrabold px-6 py-2.5 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-pink-500/30 active:scale-95 border border-white/20">
+                            Сгенерировать
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Standard Cases Grid -->
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Standard Case -->
+                <div class="glass-panel-interactive p-4 rounded-3xl border border-blue-500/30 flex flex-col justify-between relative overflow-hidden group">
+                    <div class="text-center">
+                        <div class="w-16 h-16 mx-auto mb-3 relative flex items-center justify-center bg-blue-500/10 rounded-2xl border border-blue-500/30">
+                            <i class="fa-solid fa-box text-3xl text-blue-400 drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]"></i>
+                        </div>
+                        <h4 class="font-extrabold text-sm text-white">Стандарт</h4>
+                        <p class="text-[10px] text-gray-400 mt-0.5">Rare & Epic Персонажи</p>
+                    </div>
+                    <button onclick="openCaseModal('standard')" class="mt-4 w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/30">
+                        <i class="fa-solid fa-coins text-amber-300"></i> 250
+                    </button>
+                </div>
+
+                <!-- Epic Case -->
+                <div class="glass-panel-interactive p-4 rounded-3xl border border-purple-500/40 flex flex-col justify-between relative overflow-hidden group">
+                    <div class="text-center">
+                        <div class="w-16 h-16 mx-auto mb-3 relative flex items-center justify-center bg-purple-500/10 rounded-2xl border border-purple-500/30">
+                            <i class="fa-solid fa-box-open text-3xl text-purple-400 drop-shadow-[0_0_12px_rgba(168,85,247,0.8)]"></i>
+                        </div>
+                        <h4 class="font-extrabold text-sm text-white">Эпический</h4>
+                        <p class="text-[10px] text-gray-400 mt-0.5">Epic & Legendary Шанс</p>
+                    </div>
+                    <button onclick="openCaseModal('epic')" class="mt-4 w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-purple-600/30">
+                        <i class="fa-solid fa-coins text-amber-300"></i> 750
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: INVENTORY -->
+        <section id="tab-inventory" class="hidden space-y-4">
+            <div class="flex items-center justify-between bg-black/40 p-3 rounded-2xl border border-white/10">
+                <div>
+                    <h2 class="text-lg font-black text-white">Моя Коллекция</h2>
+                    <p class="text-xs text-gray-400">Всего карточек: <span id="inventory-count" class="text-pink-400 font-extrabold">0</span></p>
+                </div>
+                <select id="filter-rarity" onchange="renderInventory()" class="bg-purple-950/80 border border-purple-500/30 text-xs text-gray-100 rounded-xl px-3 py-2 outline-none font-bold">
+                    <option value="all">Все редкости</option>
+                    <option value="Common">Обычные</option>
+                    <option value="Rare">Редкие</option>
+                    <option value="Epic">Эпические</option>
+                    <option value="Legendary">Легендарные</option>
+                    <option value="AI Mythic">AI Мифические</option>
+                </select>
+            </div>
+
+            <!-- Cards Grid -->
+            <div id="inventory-grid" class="grid grid-cols-2 gap-3 min-h-[300px]">
+                <!-- Cards render dynamically -->
+            </div>
+        </section>
+
+        <!-- TAB 3: SHOP & BONUSES -->
+        <section id="tab-shop" class="hidden space-y-4">
+            <h2 class="text-lg font-black text-white">Магазин & Награды</h2>
+            
+            <!-- Daily Bonus Card -->
+            <div class="glass-panel p-4 rounded-3xl border border-amber-500/30 flex items-center justify-between">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-xl shadow-lg shadow-amber-500/20">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-extrabold text-sm text-white">Ежедневный бонус</h4>
+                        <p class="text-[11px] text-gray-400">+500 монет ежедневно</p>
+                    </div>
+                </div>
+                <button id="btn-daily" onclick="claimDailyBonus()" class="bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-amber-500/20 active:scale-95">
+                    Забрать
+                </button>
+            </div>
+
+            <!-- Free Gem Conversion -->
+            <div class="glass-panel p-4 rounded-3xl border border-pink-500/30 flex items-center justify-between">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-2xl bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400 text-xl shadow-lg shadow-pink-500/20">
+                        <i class="fa-solid fa-right-left"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-extrabold text-sm text-white">Обмен валюты</h4>
+                        <p class="text-[11px] text-gray-400">1000 монет ➔ 10 кристаллов</p>
+                    </div>
+                </div>
+                <button onclick="convertCoinsToGems()" class="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-pink-500/20 active:scale-95 border border-white/10">
+                    Обменять
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- NAVIGATION BAR -->
+    <nav class="fixed bottom-0 left-0 right-0 glass-panel border-t border-purple-500/20 px-6 py-2.5 z-40">
+        <div class="max-w-md mx-auto flex items-center justify-around">
+            <button onclick="switchTab('cases')" id="nav-cases" class="flex flex-col items-center gap-1 text-pink-400 transition-all">
+                <i class="fa-solid fa-box-archive text-lg"></i>
+                <span class="text-[10px] font-extrabold">Кейсы</span>
+            </button>
+            <button onclick="switchTab('inventory')" id="nav-inventory" class="flex flex-col items-center gap-1 text-gray-400 transition-all">
+                <i class="fa-solid fa-cards-blank text-lg"></i>
+                <span class="text-[10px] font-extrabold">Инвентарь</span>
+            </button>
+            <button onclick="switchTab('shop')" id="nav-shop" class="flex flex-col items-center gap-1 text-gray-400 transition-all">
+                <i class="fa-solid fa-store text-lg"></i>
+                <span class="text-[10px] font-extrabold">Магазин</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- CASE OPENING MODAL -->
+    <div id="modal-case" class="fixed inset-0 bg-black/95 backdrop-blur-xl z-50 flex items-center justify-center p-4 hidden">
+        <div class="w-full max-w-sm glass-panel border border-purple-500/30 rounded-3xl p-5 text-center relative overflow-hidden shadow-2xl shadow-purple-950">
+            <button onclick="closeCaseModal()" id="btn-close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl z-10 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <!-- Spinner Animation Container -->
+            <div id="roulette-box" class="my-4">
+                <h3 id="modal-case-title" class="text-lg font-black text-white mb-1">Открытие кейса...</h3>
+                
+                <!-- AI Loader state -->
+                <div id="ai-loading-state" class="hidden my-8 space-y-4">
+                    <div class="relative w-20 h-20 mx-auto flex items-center justify-center">
+                        <div class="absolute inset-0 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
+                        <i class="fa-solid fa-wand-magic-sparkles text-2xl text-pink-400 animate-pulse"></i>
+                    </div>
+                    <p class="text-xs text-pink-300 font-extrabold animate-pulse">Gemini AI генерирует уникального аниме-персонажа...</p>
+                </div>
+
+                <!-- Carousel Roulette Container -->
+                <div id="carousel-wrapper" class="relative roulette-container overflow-hidden py-4 border-y border-white/10 my-4">
+                    <!-- Target Arrow Marker -->
+                    <div class="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-1 bg-amber-400 z-20 shadow-[0_0_12px_#facc15]"></div>
+                    <div id="roulette-track" class="flex gap-3 transition-transform ease-out duration-[4000ms]">
+                        <!-- Dynamically filled with card items -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESULT CARD VIEW -->
+            <div id="result-card-box" class="hidden my-2">
+                <div id="result-card" class="card-shine rounded-2xl p-4 border-2 transition-all transform duration-500 scale-95 opacity-0">
+                    <img id="result-img" src="" alt="Anime Hero" class="w-full h-52 object-cover rounded-xl mb-3 shadow-lg border border-white/10">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span id="result-rarity" class="text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full"></span>
+                        <span id="result-element" class="text-xs font-bold text-gray-200"></span>
+                    </div>
+                    <h3 id="result-name" class="text-lg font-black text-white text-left tracking-wide"></h3>
+                    <div class="flex items-center justify-between text-xs text-gray-300 mt-2 pt-2 border-t border-white/10">
+                        <span>Сила: <strong id="result-power" class="text-amber-300 font-extrabold"></strong></span>
+                        <button id="btn-sell-card" onclick="sellCurrentCard()" class="text-amber-400 hover:underline font-extrabold text-xs">
+                            Продать за <span id="sell-price">0</span> 🪙
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-claim-card" onclick="closeCaseModal()" class="hidden w-full mt-3 bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-purple-600/30 active:scale-95 border border-white/20">
+                Забрать в Инвентарь
+            </button>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION TOAST -->
+    <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 bg-black/90 border border-purple-500/40 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl z-50 transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+        <i id="toast-icon" class="fa-solid fa-circle-info text-pink-400"></i>
+        <span id="toast-msg">Сообщение</span>
+    </div>
+
+    <script>
+        // Initialize Telegram WebApp SDK
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+        }
+
+        // Global User State
+        let userData = {
+            coins: 1500,
+            gems: 50,
+            level: 1,
+            inventory: [],
+            lastDaily: null
+        };
+
+        // Static Cards Pool for Roulette
+        const cardDatabase = [
+        // Static Cards Pool with pre-generated anime art style
+        const cardDatabase = [
+            { name: "Леви Аккерман", rarity: "Rare", power: 340, img: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&auto=format&fit=crop&q=80", element: "⚔️ Сталь" },
+            { name: "Микаса Аккерман", rarity: "Epic", power: 780, img: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=400&auto=format&fit=crop&q=80", element: "⚔️ Тьма" },
+            { name: "Сатору Годжо", rarity: "Epic", power: 890, img: "https://images.unsplash.com/photo-1563089145-599997674d42?w=400&auto=format&fit=crop&q=80", element: "🌀 Бесконечность" },
+            { name: "Сукуна Рёмен", rarity: "Legendary", power: 1500, img: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&auto=format&fit=crop&q=80", element: "💀 Кровь" }
+        ];
+
+        let activeWonCard = null;
+
+        // Initialize App
+        window.onload = () => {
+            loadUserData();
+            updateUI();
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                const u = tg.initDataUnsafe.user;
+                document.getElementById('user-name').innerText = u.first_name || "Игрок";
+                document.getElementById('user-avatar').innerText = (u.first_name || "A")[0].toUpperCase();
+            }
+        };
+
+        // Local Storage Sync
+        function loadUserData() {
+            const saved = localStorage.getItem('anime_gacha_user');
+            if (saved) {
+                try { userData = JSON.parse(saved); } catch (e) {}
+            }
+        }
+
+        function saveUserData() {
+            localStorage.setItem('anime_gacha_user', JSON.stringify(userData));
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('balance-coins').innerText = userData.coins.toLocaleString();
+            document.getElementById('balance-gems').innerText = userData.gems.toLocaleString();
+            document.getElementById('inventory-count').innerText = userData.inventory.length;
+        }
+
+        // Navigation Tabs
+        function switchTab(tab) {
+            ['cases', 'inventory', 'shop'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`nav-${t}`).classList.replace('text-purple-400', 'text-gray-400');
+            });
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.getElementById(`nav-${tab}`).classList.replace('text-gray-400', 'text-purple-400');
+
+            if (tab === 'inventory') renderInventory();
+        }
+
+        // Toast Notification
+        function showToast(msg, icon = "fa-circle-info") {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            document.getElementById('toast-icon').className = `fa-solid ${icon} text-purple-400`;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+
+        // --- CASE OPENING LOGIC ---
+
+        async function openCaseModal(type) {
+            // Price Check
+            if (type === 'standard' && userData.coins < 250) return showToast("Недостаточно монет (250)", "fa-triangle-exclamation");
+            if (type === 'epic' && userData.coins < 750) return showToast("Недостаточно монет (750)", "fa-triangle-exclamation");
+            if (type === 'ai' && userData.gems < 20) return showToast("Недостаточно кристаллов (20)", "fa-triangle-exclamation");
+
+            // Deduct Currency
+            if (type === 'standard') userData.coins -= 250;
+            if (type === 'epic') userData.coins -= 750;
+            if (type === 'ai') userData.gems -= 20;
+            saveUserData();
+
+            if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+            // UI Reset
+            document.getElementById('modal-case').classList.remove('hidden');
+            document.getElementById('roulette-box').classList.remove('hidden');
+            document.getElementById('result-card-box').classList.add('hidden');
+            document.getElementById('btn-claim-card').classList.add('hidden');
+            document.getElementById('btn-close-modal').classList.add('hidden');
+
+            if (type === 'ai') {
+                // AI Generation Mode
+                document.getElementById('carousel-wrapper').classList.add('hidden');
+                document.getElementById('ai-loading-state').classList.remove('hidden');
+                document.getElementById('modal-case-title').innerText = "Генерация AI-Героя";
+
+                const aiCard = await generateAiAnimeCard();
+                activeWonCard = aiCard;
+
+                document.getElementById('ai-loading-state').classList.add('hidden');
+                showWonCard(aiCard);
+            } else {
+                // Standard Roulette Spin Mode
+                document.getElementById('carousel-wrapper').classList.remove('hidden');
+                document.getElementById('ai-loading-state').classList.add('hidden');
+                document.getElementById('modal-case-title').innerText = "Прокрутка кейса...";
+
+                setupRouletteTrack();
+            }
+        }
+
+        function setupRouletteTrack() {
+            const track = document.getElementById('roulette-track');
+            track.style.transition = 'none';
+            track.style.transform = 'translateX(0px)';
+            track.innerHTML = '';
+
+            // Generate 40 items for spin effect
+            const trackCards = [];
+            for (let i = 0; i < 40; i++) {
+                const randomCard = cardDatabase[Math.floor(Math.random() * cardDatabase.length)];
+                trackCards.push(randomCard);
+                
+                const cardEl = document.createElement('div');
+                cardEl.className = `flex-shrink-0 w-28 h-36 glass-panel rounded-xl p-2 flex flex-col justify-between border ${getRarityBorder(randomCard.rarity)}`;
+                cardEl.innerHTML = `
+                    <img src="${randomCard.img}" class="w-full h-20 object-cover rounded-lg">
+                    <div class="text-left">
+                        <span class="text-[8px] font-bold uppercase block text-gray-400">${randomCard.rarity}</span>
+                        <h5 class="text-[10px] font-bold text-white truncate">${randomCard.name}</h5>
+                    </div>
+                `;
+                track.appendChild(cardEl);
+            }
+
+            // Target card is around item 32
+            activeWonCard = trackCards[32];
+
+            // Trigger Animation
+            setTimeout(() => {
+                track.style.transition = 'transform 4s cubic-bezier(0.15, 0.9, 0.2, 1)';
+                // Item width 112px + gap 12px = 124px
+                const targetOffset = -(32 * 124 - 100); 
+                track.style.transform = `translateX(${targetOffset}px)`;
+            }, 100);
+
+            setTimeout(() => {
+                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                showWonCard(activeWonCard);
+            }, 4300);
+        }
+
+        // --- GEMINI AI IMAGE GENERATION API ---
+        async function generateAiAnimeCard() {
+            try {
+                const apiKey = ""; // Left empty for system context execution
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${apiKey}`;
+
+                const elements = ["🔥 Огонь", "⚡ Гром", "💧 Вода", "🌌 Космос", "✨ Свет", "💀 Тьма"];
+                const randomElem = elements[Math.floor(Math.random() * elements.length)];
+
+                const prompt = `Highly detailed anime character portrait, fantasy epic hero, masterpiece digital art, sharp focus, 8k resolution, glowing background, element power ${randomElem}`;
+
+                const payload = {
+                    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseModalities: ['IMAGE'],
+                        imageConfig: { aspectRatio: "1:1" }
+                    }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+
+                let imgUrl = "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=400&auto=format&fit=crop&q=80"; // Fallback
+                if (part) {
+                    imgUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                }
+
+                // Randomize AI Card stats
+                const aiNames = ["Акари Нейро", "Каэль Светлый", "Зефир Бездна", "Кира Войд", "Лира Звездная"];
+                return {
+                    id: Date.now(),
+                    name: aiNames[Math.floor(Math.random() * aiNames.length)] + " (AI)",
+                    rarity: "AI Mythic",
+                    power: Math.floor(Math.random() * 1000) + 1200,
+                    img: imgUrl,
+                    element: randomElem
+                };
+            } catch (e) {
+                console.error("AI Generation Error:", e);
+                // Fallback Card
+                return {
+                    id: Date.now(),
+                    name: "Кибер Самурай (AI)",
+                    rarity: "AI Mythic",
+                    power: 1800,
+                    img: "https://images.unsplash.com/photo-1563089145-599997674d42?w=400&auto=format&fit=crop&q=80",
+                    element: "⚡ Неон"
+                };
+            }
+        }
+
+        function showWonCard(card) {
+            document.getElementById('roulette-box').classList.add('hidden');
+            document.getElementById('result-card-box').classList.remove('hidden');
+            document.getElementById('btn-claim-card').classList.remove('hidden');
+            document.getElementById('btn-close-modal').classList.remove('hidden');
+
+            const cardEl = document.getElementById('result-card');
+            cardEl.className = `card-shine rounded-2xl p-4 border-2 transition-all ${getRarityGlow(card.rarity)}`;
+            
+            document.getElementById('result-img').src = card.img;
+            document.getElementById('result-name').innerText = card.name;
+            document.getElementById('result-rarity').innerText = card.rarity;
+            document.getElementById('result-rarity').className = `text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${getRarityBadge(card.rarity)}`;
+            document.getElementById('result-element').innerText = card.element || "⚡ Энергия";
+            document.getElementById('result-power').innerText = card.power;
+
+            // Sell Price Calculation
+            const price = getCardSellPrice(card.rarity);
+            document.getElementById('sell-price').innerText = price;
+
+            // Add card to Inventory
+            userData.inventory.push({ ...card, id: card.id || Date.now() });
+            saveUserData();
+
+            // Reveal Animation
+            setTimeout(() => {
+                cardEl.classList.remove('scale-95', 'opacity-0');
+                cardEl.classList.add('scale-100', 'opacity-100');
+            }, 50);
+        }
+
+        function closeCaseModal() {
+            document.getElementById('modal-case').classList.add('hidden');
+            activeWonCard = null;
+        }
+
+        function sellCurrentCard() {
+            if (!activeWonCard) return;
+            const price = getCardSellPrice(activeWonCard.rarity);
+            
+            // Remove from inventory
+            userData.inventory.pop();
+            userData.coins += price;
+            saveUserData();
+
+            showToast(`Продано за ${price} монет!`, "fa-coins");
+            closeCaseModal();
+        }
+
+        // --- HELPER FUNCTIONS ---
+        function getRarityBorder(rarity) {
+            switch (rarity) {
+                case 'Common': return 'border-gray-500';
+                case 'Rare': return 'border-blue-500';
+                case 'Epic': return 'border-purple-500';
+                case 'Legendary': return 'border-amber-500';
+                case 'AI Mythic': return 'border-pink-500';
+                default: return 'border-gray-500';
+            }
+        }
+
+        function getRarityGlow(rarity) {
+            switch (rarity) {
+                case 'Common': return 'glow-common bg-gray-900/60';
+                case 'Rare': return 'glow-rare bg-blue-950/60';
+                case 'Epic': return 'glow-epic bg-purple-950/60';
+                case 'Legendary': return 'glow-legendary bg-amber-950/60';
+                case 'AI Mythic': return 'glow-mythic bg-pink-950/60';
+                default: return 'glow-common';
+            }
+        }
+
+        function getRarityBadge(rarity) {
+            switch (rarity) {
+                case 'Common': return 'bg-gray-700 text-gray-200';
+                case 'Rare': return 'bg-blue-600 text-white';
+                case 'Epic': return 'bg-purple-600 text-white';
+                case 'Legendary': return 'bg-amber-500 text-black';
+                case 'AI Mythic': return 'bg-pink-600 text-white animate-pulse';
+                default: return 'bg-gray-700';
+            }
+        }
+
+        function getCardSellPrice(rarity) {
+            switch (rarity) {
+                case 'Common': return 100;
+                case 'Rare': return 300;
+                case 'Epic': return 800;
+                case 'Legendary': return 2500;
+                case 'AI Mythic': return 5000;
+                default: return 50;
+            }
+        }
+
+        // --- INVENTORY RENDER ---
+        function renderInventory() {
+            const grid = document.getElementById('inventory-grid');
+            const filter = document.getElementById('filter-rarity').value;
+            grid.innerHTML = '';
+
+            let items = userData.inventory;
+            if (filter !== 'all') {
+                items = items.filter(c => c.rarity === filter);
+            }
+
+            if (items.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-2 text-center py-12 text-gray-500">
+                        <i class="fa-solid fa-box-open text-4xl mb-2 opacity-40"></i>
+                        <p class="text-xs">Инвентарь пуст. Открывай кейсы!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            items.forEach((card) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = `glass-panel rounded-2xl p-2.5 border flex flex-col justify-between ${getRarityBorder(card.rarity)} relative group overflow-hidden`;
+                cardEl.innerHTML = `
+                    <img src="${card.img}" class="w-full h-28 object-cover rounded-xl mb-2">
+                    <div>
+                        <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${getRarityBadge(card.rarity)}">${card.rarity}</span>
+                        <h4 class="font-extrabold text-xs text-white truncate mt-1">${card.name}</h4>
+                        <div class="flex items-center justify-between text-[10px] text-gray-400 mt-1">
+                            <span>⚡ ${card.power}</span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(cardEl);
+            });
+        }
+
+        // --- SHOP & ECONOMY ---
+        function claimDailyBonus() {
+            const now = Date.now();
+            const cooldown = 24 * 60 * 60 * 1000; // 24 hours
+
+            if (userData.lastDaily && (now - userData.lastDaily < cooldown)) {
+                const remaining = Math.ceil((cooldown - (now - userData.lastDaily)) / (1000 * 60 * 60));
+                return showToast(`Приходите через ${remaining} ч.`, "fa-clock");
+            }
+
+            userData.coins += 500;
+            userData.lastDaily = now;
+            saveUserData();
+            showToast("Получено +500 монет!", "fa-coins");
+        }
+
+        function convertCoinsToGems() {
+            if (userData.coins < 1000) return showToast("Нужно 1000 монет", "fa-triangle-exclamation");
+            userData.coins -= 1000;
+            userData.gems += 10;
+            saveUserData();
+            showToast("Успешный обмен: +10 кристаллов!", "fa-gem");
+        }
+    </script>
+</body>
+</html>
+```
